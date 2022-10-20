@@ -354,7 +354,7 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
     var target = transform.target,
       // find how big the object would be, if there was no skewX. takes in account scaling
       dimNoSkew = target._getTransformedDimensions({
-        skewX: target.skewX,
+        skewX: 0,
         skewY: 0,
       }),
       localPoint = getLocalPoint(

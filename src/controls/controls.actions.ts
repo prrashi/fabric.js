@@ -339,9 +339,7 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
     }
     var hasSkewed = currentSkew !== newSkew;
     if (hasSkewed) {
-      var dimBeforeSkewing = target._getTransformedDimensions().y;
       target.set('skewX', newSkew);
-      compensateScaleForSkew(target, 'skewY', 'scaleY', 'y', dimBeforeSkewing);
     }
     return hasSkewed;
   }

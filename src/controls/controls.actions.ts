@@ -289,10 +289,9 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
       skewBefore = new Point(target.skewX, target.skewY),
       // canvas transformation applies skewY before skewX
       // this means that in order to extract skewX we need to account for skewY in the initial transformation
-      counterAxisSkewing = axis === 'x' ? skewBefore.y : 0,
       dimNoSkew = target._getTransformedDimensions({
         skewX: 0,
-        skewY: counterAxisSkewing,
+        skewY: axis === 'x' ? skewBefore.y : 0,
         scaleX: 1,
         scaleY: 1,
       }),
@@ -308,6 +307,7 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
           target.resolveOriginX(transform.originX) *
             target.resolveOriginY(transform.originY)
         ) * (targetHasOneFlip(target) ? -1 : 1),
+      skewingFactor = axis === 'x' ? Math.sign(skewBefore.y) * dirFactor : 1,
       // the mouse is in the center of the object, and we want it to stay there.
       // we use the pointer to define the new size of target
       // since the pointer is positioned at target center of axis,
@@ -320,10 +320,7 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
       // shearY = (y' - y) / x = tan(skewY in radians)
       // calculating skewX:
       // same as calculating skewY since we accounted for the existing skewY value in dimNoSkew
-      sizeDiff =
-        axisSize -
-        dimNoSkew[axis] *
-          (Math.sign(counterAxisSkewing) * dirFactor < 0 ? -1 : 1),
+      sizeDiff = axisSize - dimNoSkew[axis] * skewingFactor,
       newSkew =
         // make it easy to go back to position 0.
         Math.abs(sizeDiff) < 2
@@ -388,6 +385,7 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
         target[skewKey] > 0
           ? -1
           : 1) *
+          (targetHasOneFlip(target) ? -1 : 1) *
           -Math.sign(counterOriginFactor) *
           0.5 +
         0.5;

@@ -299,11 +299,12 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
    * @private
    */
   function skewObjectX(eventData, transform, x, y) {
-    var target = transform.target,
-      // find how big the object would be, if there was no skewX. takes in account scaling
+    const target = transform.target,
       dimNoSkew = target._getTransformedDimensions({
         skewX: 0,
         skewY: target.skewY,
+        scaleX: 1,
+        scaleY: 1,
       }),
       localPoint = getLocalPoint(
         transform,
@@ -311,33 +312,25 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
         transform.originY,
         x,
         y
-      ),
+      ).divide(new Point(target.scaleX, target.scaleY)),
+      dirFactor =
+        Math.sign(
+          target.resolveOriginX(transform.originX) *
+            target.resolveOriginY(transform.originY)
+        ) * (targetHasOneFlip(target) ? -1 : 1),
       // the mouse is in the center of the object, and we want it to stay there.
-      // so the object will grow twice as much as the mouse.
+      // we use the pointer to define the new size of target
       // this makes the skew growth to localPoint * 2 - dimNoSkew.
-      totalSkewSize = Math.abs(localPoint.x * 2) - dimNoSkew.x,
+      axisSize = Math.abs(localPoint.x * 2),
+      sizeDiff = axisSize - dimNoSkew.x * dirFactor * Math.sign(target.skewY),
       currentSkew = target.skewX,
-      newSkew;
-    if (totalSkewSize < 2) {
-      // let's make it easy to go back to position 0.
-      newSkew = 0;
-    } else {
-      newSkew = radiansToDegrees(
-        Math.atan2(totalSkewSize / target.scaleX, dimNoSkew.y / target.scaleY)
-      );
-      // now we have to find the sign of the skew.
-      // it mostly depend on the origin of transformation.
-      if (transform.originX === LEFT && transform.originY === BOTTOM) {
-        newSkew = -newSkew;
-      }
-      if (transform.originX === RIGHT && transform.originY === TOP) {
-        newSkew = -newSkew;
-      }
-      if (targetHasOneFlip(target)) {
-        newSkew = -newSkew;
-      }
-    }
-    var hasSkewed = currentSkew !== newSkew;
+      newSkew =
+        // let's make it easy to go back to position 0.
+        Math.abs(sizeDiff) < 2
+          ? 0
+          : radiansToDegrees(Math.atan2(sizeDiff, dimNoSkew.y) * dirFactor),
+      hasSkewed = currentSkew !== newSkew;
+
     if (hasSkewed) {
       target.set('skewX', newSkew);
     }

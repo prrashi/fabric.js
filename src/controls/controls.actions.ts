@@ -1,6 +1,8 @@
 //@ts-nocheck
 
+import { AXIS_KEYS } from '../constants';
 import { Point } from '../point.class';
+import { TAxis } from '../typedefs';
 import { fireEvent } from '../util/fireEvent';
 import { renderCircleControl, renderSquareControl } from './controls.render';
 
@@ -295,14 +297,17 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
   }
 
   /**
-   * Action handler for skewing on the X axis
+   * Action handler for skewing an object across an axis
    * @private
    */
-  function skewObjectX(eventData, transform, x, y) {
-    const target = transform.target,
+  function skewObject(axis: TAxis, eventData, transform, x, y) {
+    const { counterAxis, skew: skewKey } = AXIS_KEYS[axis],
+      { target } = transform,
+      skewBefore = new Point(target.skewX, target.skewY),
+      counterAxisSkewing = axis === 'x' ? skewBefore.y : 0,
       dimNoSkew = target._getTransformedDimensions({
         skewX: 0,
-        skewY: target.skewY,
+        skewY: counterAxisSkewing,
         scaleX: 1,
         scaleY: 1,
       }),
@@ -321,70 +326,32 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
       // the mouse is in the center of the object, and we want it to stay there.
       // we use the pointer to define the new size of target
       // this makes the skew growth to localPoint * 2 - dimNoSkew.
-      axisSize = Math.abs(localPoint.x * 2),
-      sizeDiff = axisSize - dimNoSkew.x * dirFactor * Math.sign(target.skewY),
-      currentSkew = target.skewX,
+      axisSize = Math.abs(localPoint[axis] * 2),
+      sizeDiff =
+        axisSize -
+        dimNoSkew[axis] * (counterAxisSkewing * dirFactor < 0 ? -1 : 1),
       newSkew =
         // let's make it easy to go back to position 0.
         Math.abs(sizeDiff) < 2
           ? 0
-          : radiansToDegrees(Math.atan2(sizeDiff, dimNoSkew.y) * dirFactor),
-      hasSkewed = currentSkew !== newSkew;
+          : radiansToDegrees(
+              Math.atan2(sizeDiff, dimNoSkew[counterAxis]) * dirFactor
+            ),
+      hasSkewed = skewBefore[axis] !== newSkew;
 
     if (hasSkewed) {
-      target.set('skewX', newSkew);
-    }
-    return hasSkewed;
-  }
-
-  /**
-   * Action handler for skewing on the Y axis
-   * @private
-   */
-  function skewObjectY(eventData, transform, x, y) {
-    var target = transform.target,
-      // find how big the object would be, if there was no skewX. takes in account scaling
-      dimNoSkew = target._getTransformedDimensions({
-        skewX: 0,
-        skewY: 0,
-      }),
-      localPoint = getLocalPoint(
-        transform,
-        transform.originX,
-        transform.originY,
-        x,
-        y
-      ),
-      // the mouse is in the center of the object, and we want it to stay there.
-      // so the object will grow twice as much as the mouse.
-      // this makes the skew growth to localPoint * 2 - dimNoSkew.
-      totalSkewSize = Math.abs(localPoint.y * 2) - dimNoSkew.y,
-      currentSkew = target.skewY,
-      newSkew;
-    if (totalSkewSize < 2) {
-      // let's make it easy to go back to position 0.
-      newSkew = 0;
-    } else {
-      newSkew = radiansToDegrees(
-        Math.atan2(totalSkewSize / target.scaleY, dimNoSkew.x / target.scaleX)
-      );
-      // now we have to find the sign of the skew.
-      // it mostly depend on the origin of transformation.
-      if (transform.originX === LEFT && transform.originY === BOTTOM) {
-        newSkew = -newSkew;
+      target.set(skewKey, newSkew);
+      if (axis === 'y') {
+        // we don't want skewing to affect scaleX so we factor it by the inverse skewing diff to make it seem unchanged to the viewer
+        const { skewX, scaleX } = target,
+          dimBefore = target._getTransformedDimensions({
+            skewY: skewBefore.y,
+          }),
+          dimAfter = target._getTransformedDimensions(),
+          compensationFactor = skewX !== 0 ? dimBefore.x / dimAfter.x : 1;
+        compensationFactor !== 1 &&
+          target.set('scaleX', compensationFactor * scaleX);
       }
-      if (transform.originX === RIGHT && transform.originY === TOP) {
-        newSkew = -newSkew;
-      }
-      if (targetHasOneFlip(target)) {
-        newSkew = -newSkew;
-      }
-    }
-    var hasSkewed = currentSkew !== newSkew;
-    if (hasSkewed) {
-      var dimBeforeSkewing = target._getTransformedDimensions().x;
-      target.set('skewY', newSkew);
-      compensateScaleForSkew(target, 'skewX', 'scaleX', 'x', dimBeforeSkewing);
     }
     return hasSkewed;
   }
@@ -438,7 +405,7 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
     transform.originX = originX;
     var finalHandler = wrapWithFireEvent(
       'skewing',
-      wrapWithFixedAnchor(skewObjectX)
+      wrapWithFixedAnchor(skewObject.bind(this, 'x'))
     );
     return finalHandler(eventData, transform, x, y);
   }
@@ -492,7 +459,7 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
     transform.originY = originY;
     var finalHandler = wrapWithFireEvent(
       'skewing',
-      wrapWithFixedAnchor(skewObjectY)
+      wrapWithFixedAnchor(skewObject.bind(this, 'y'))
     );
     return finalHandler(eventData, transform, x, y);
   }

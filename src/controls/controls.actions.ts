@@ -280,6 +280,7 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
 
   /**
    * Action handler for skewing an object across an axis
+   * Uses the distance between the pointer and the origin point to determine the size of the target's axis
    * @private
    */
   function skewObject(axis: TAxis, eventData, transform, x, y) {
@@ -287,7 +288,7 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
       { target } = transform,
       skewBefore = new Point(target.skewX, target.skewY),
       // canvas transformation applies skewY before skewX
-      // this means that in order to extract skewX we need to account for skewY
+      // this means that in order to extract skewX we need to account for skewY in the initial transformation
       counterAxisSkewing = axis === 'x' ? skewBefore.y : 0,
       dimNoSkew = target._getTransformedDimensions({
         skewX: 0,
@@ -336,7 +337,7 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
       target.set(skewKey, newSkew);
       if (axis === 'y') {
         // we don't want skewing to affect scaleX
-        // so we factor it by the inverse size diff caused by skewing
+        // we achieve that by factoring scaleX by the inverse size diff caused by skewing
         // so that it seems unchanged to the viewer
         const { skewX, scaleX } = target,
           dimBefore = target._getTransformedDimensions({
@@ -370,6 +371,7 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
         lockSkewing: lockSkewingKey,
         skew: skewKey,
       } = AXIS_KEYS[axis];
+
     if (target[lockSkewingKey]) {
       return false;
     }

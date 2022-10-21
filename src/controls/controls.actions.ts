@@ -302,12 +302,14 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
         x,
         y
       ).divide(new Point(target.scaleX, target.scaleY)),
+      flipFactor = targetHasOneFlip(target) ? -1 : 1,
       dirFactor =
         Math.sign(
           target.resolveOriginX(transform.originX) *
             target.resolveOriginY(transform.originY)
-        ) * (targetHasOneFlip(target) ? -1 : 1),
-      skewingFactor = axis === 'x' ? Math.sign(skewBefore.y) * dirFactor : 1,
+        ) * flipFactor,
+      skewingFactor =
+        (axis === 'x' ? Math.sign(skewBefore.y) * dirFactor : 1) * flipFactor,
       // the mouse is in the center of the object, and we want it to stay there.
       // we use the pointer to define the new size of target
       // since the pointer is positioned at target center of axis,

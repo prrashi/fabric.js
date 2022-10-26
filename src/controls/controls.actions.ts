@@ -354,7 +354,8 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
     var target = transform.target,
       // find how big the object would be, if there was no skewX. takes in account scaling
       dimNoSkew = target._getTransformedDimensions({
-        skewX: target.skewX,
+        // since skewY is applied after skewX the calculation should not take skewX into account
+        skewX: 0,
         skewY: 0,
       }),
       localPoint = getLocalPoint(
@@ -393,6 +394,7 @@ import { renderCircleControl, renderSquareControl } from './controls.render';
     if (hasSkewed) {
       var dimBeforeSkewing = target._getTransformedDimensions().x;
       target.set('skewY', newSkew);
+      // we don't want skewing to affect scaleX so we factor it by the inverse skewing diff to make it seem unchanged to the viewer
       compensateScaleForSkew(target, 'skewX', 'scaleX', 'x', dimBeforeSkewing);
     }
     return hasSkewed;
